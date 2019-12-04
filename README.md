@@ -47,17 +47,18 @@ agentów, kolejek wiadomości, nadzorców sprawującymi pieczę nad agentami.
 
 Agenci porozumiewają się poprzez przesyłanie wiadomości, zarówno sychnornicznych jak i asynchronicznych.
 
-Nazdorcy są dopowiedzialni za wykrywanie anomalii w działanie agentów oraz
+Nazdorcy są dopowiedzialni za wykrywanie anomalii w działaniu agentów oraz
 restartowanie ich wedle ustawionych polityk.
+
 
 ## Architektura rozwiąznia
 
-System będzie podzielony na kilka grup agentów, każda z nich będzie pełniła określone, odmienne zadanie w systemie.
+System będzie podzielony na kilka grup agentów, każda z nich będzie pełniła określone, odmienne zadania w systemie.
 
 Celem zwiększenia ilości agentów każde zapytanie będzie reprezentowane w systemie przez osobnego agenta.
-Agent-zapytanie rozpropaguje zapytanie do wszystkich, znanych sobie, routerów. Stąd zapytanie zostanie 
-przekierowane do routerów. Stąd zapytnie zostanie przekierowane do routerów obsługującego specjalistów określonychw
-w zapytaniu. Stąd zapytanie trafi do agentów reprezentujących lekarzy specjalistów. Ta warstwa agentów przetworzy
+Agent-zapytanie rozpropaguje zapytanie do wszystkich, znanych sobie, routerów.
+Stąd zapytnie zostanie przekierowane do routerów obsługującego specjalistów określonych
+w zapytaniu. Skąd zapytanie trafi do agentów reprezentujących lekarzy specjalistów. Ta warstwa agentów przetworzy
 zapytanie oraz odpowie bezpośrednio agentowi zadającemu zapytanie. 
 
 
@@ -79,8 +80,8 @@ Zastosujemy poniższe wskaźniki:
 ### Testowi użytkowncy
 
 Użytkownicy w SUT będą generowani programowo.
-Użytkownicy będą wysyłali zapytania do systemu zgodnie z rozkładem Gaussa.
-Rozkład naturalny będzie też cechował czasy reakcji użytkowników.
+Będą oni wysyłali zapytania do systemu zgodnie z rozkładem Gaussa.
+Rozkład naturalny będzie także cechował czasy reakcji użytkowników.
 
-Użytkownicy będą także złośliwi - próby rezerwacji nieistniejąccyh slotów, nieistniejących lekarzy,
+Część użytkowników będzie złośliwa - próby rezerwacji nieistniejąccyh slotów, nieistniejących lekarzy,
 odwoływnie nieistniejących wizyt, jak i wizyt już odbytych.
