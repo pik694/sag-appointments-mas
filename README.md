@@ -1,14 +1,14 @@
 # Wizyty lekarskie
 
 ## Przegląd 
-System wleloagentowy realizujący rezerwacje wizyt lekarskich.
+System wieloagentowy realizujący rezerwacje wizyt lekarskich.
 
 ## Zakres projektu
 
-W ramach projektu semestranlego powstanie system wieloagentowy 
+W ramach projektu semestralnego powstanie system wieloagentowy 
 obsługujący rezerwacje wizyt lekarskich. 
 
-System będzie oparty na sieciach kontraktkowych:
+System będzie oparty na sieciach kontraktowych:
 - manager przyjmuje zlecenie na omówienie wizyty z określonym specjalistą;
 - manager wysyła żądanie do kontraktorów, którzy przeglądają rejestry wizyt 
 	i zwracają propozycję wizyty/informację o braku terminów;
@@ -37,7 +37,7 @@ jest wysoka przepustowość, utrzymywanie wielu równoległych połączeń. BEAM
 na wprowadzanie poprawek do kodu na działających instancjach aplikacji tzw. hot swap.
 
 BEAM jest zaprojektowany do systemów o poniższych cechach:
-- rozporoszony;
+- rozproszony;
 - odporny na błędy;
 - system czasu rzeczywistego o miękkich ograniczeniach;
 - wysoko-dostępny.
@@ -45,19 +45,19 @@ BEAM jest zaprojektowany do systemów o poniższych cechach:
 Oprócz powyższych cech, wybór Elixir'a uzasadniamy wbudowaną obsługą
 agentów, kolejek wiadomości, nadzorców sprawującymi pieczę nad agentami.
 
-Agenci porozumiewają się poprzez przesyłanie wiadomości, zarówno sychnornicznych jak i asynchronicznych.
+Agenci porozumiewają się poprzez przesyłanie wiadomości, zarówno synchronicznych jak i asynchronicznych.
 
-Nazdorcy są dopowiedzialni za wykrywanie anomalii w działaniu agentów oraz
+Nadzorcy są odpowiedzialni za wykrywanie anomalii w działaniu agentów oraz
 restartowanie ich wedle ustawionych polityk.
 
 
-## Architektura rozwiąznia
+## Architektura rozwiązania 
 
 System będzie podzielony na kilka grup agentów, każda z nich będzie pełniła określone, odmienne zadania w systemie.
 
 Celem zwiększenia ilości agentów każde zapytanie będzie reprezentowane w systemie przez osobnego agenta.
 Agent-zapytanie rozpropaguje zapytanie do wszystkich, znanych sobie, routerów.
-Stąd zapytnie zostanie przekierowane do routerów obsługującego specjalistów określonych
+Stąd zapytanie zostanie przekierowane do routerów obsługującego specjalistów określonych
 w zapytaniu. Skąd zapytanie trafi do agentów reprezentujących lekarzy specjalistów. Ta warstwa agentów przetworzy
 zapytanie oraz odpowie bezpośrednio agentowi zadającemu zapytanie. 
 
@@ -65,7 +65,7 @@ zapytanie oraz odpowie bezpośrednio agentowi zadającemu zapytanie.
 ## Testowanie
 
 Testowanie systemu będzie się odbywało poprzez wstrzykiwanie agentów o określonych parametrach
-oraz obserwowanie zachownia systemu pod różnym obciążeniem.
+oraz obserwowanie zachowania systemu pod różnym obciążeniem.
 Agentów będziemy parametryzować w taki sposób, aby symulować wysokie obciążenie systemu oraz błędy oprogramowania.
  
 Zamierzamy również wyłączać ręcznie pewne fragmenty systemu.
@@ -83,5 +83,5 @@ Użytkownicy w SUT będą generowani programowo.
 Będą oni wysyłali zapytania do systemu zgodnie z rozkładem Gaussa.
 Rozkład naturalny będzie także cechował czasy reakcji użytkowników.
 
-Część użytkowników będzie złośliwa - próby rezerwacji nieistniejąccyh slotów, nieistniejących lekarzy,
-odwoływnie nieistniejących wizyt, jak i wizyt już odbytych.
+Część użytkowników będzie złośliwa - próby rezerwacji nieistniejących slotów, nieistniejących lekarzy,
+odwoływanie nieistniejących wizyt, jak i wizyt już odbytych.
