@@ -7,7 +7,7 @@ defmodule SagAppointments.MixProject do
       version: "0.1.0",
       elixir: "~> 1.9",
       elixir_paths: elixir_paths(Mix.env()),
-      compilers: [:phoenix] ++ Mix.compilers(),
+      # compilers: [:phoenix] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -15,21 +15,19 @@ defmodule SagAppointments.MixProject do
 
   def application do
     [
-      mod: {SagAppointments.Application},
+      mod: {SagAppointments.Application, []},
       extra_applications: [:logger]
     ]
   end
 
   defp deps do
     [
-      {:phoenix, "~> 1.4"},
-      {:jason, "~> 1.1"},
-      {:plug_cowboy, "~> 2.1"},
+      {:gen_stage, "~> 0.14.3"},
+      {:timex, "~> 3.6"},
       {:ex_unit_fixtures, "~> 0.3", only: [:test]}
     ]
   end
 
   defp elixir_paths(:test), do: ["lib", "test/test_helpers"]
   defp elixir_paths(_), do: ["lib"]
-  
 end

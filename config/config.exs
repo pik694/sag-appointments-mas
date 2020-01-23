@@ -5,6 +5,6 @@ config :logger,
        format: "$time $metadata[$level]: $message\n",
        metadata: [:requiest_id]
 
-config :phoenix, :json_library, Jason
+# config :phoenix, :json_library, Jason
 
 import_config "#{Mix.env()}.exs"
