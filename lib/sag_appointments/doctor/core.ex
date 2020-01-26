@@ -22,6 +22,11 @@ defmodule SagAppointments.Doctor.Core do
     slots(state, begin_date, end_date) -- taken
   end
 
+  
+  def check_slot_available(state, taken, slot) do
+    :ok 
+  end
+  
   defp day_intervals(working_hours, visit_time, date) do
     with {:ok, %{start: day_start, end: day_end}} <-
            Map.fetch(working_hours, Timex.weekday(date)),

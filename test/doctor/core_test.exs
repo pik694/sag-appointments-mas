@@ -15,6 +15,7 @@ defmodule SagAppointments.Doctor.CoreTest do
       surname: "Smith",
       field: "Pediatrician",
       clinic: "XYZ",
+      forward_slots: Timex.Duration.from_weeks(2),
       working_hours: @default_days,
       visit_time: 10
     )

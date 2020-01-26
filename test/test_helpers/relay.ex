@@ -8,6 +8,13 @@ defmodule SagAppointments.TestHelpers.Relay do
   end
 
   def init(wait_period), do: {:ok, %{wait_period: wait_period, wait_rounds: 0}}
+  
+  def send_message(relay, message, receiver, sync \\ :async) do
+    case sync do
+      :async -> GenServer.call(relay, {receiver, message})
+      :sync -> GenServer.call(receiver, message)
+    end
+  end
 
   def handle_call({who, request}, from, state) do
     GenServer.cast(who, Map.put(request, :from, self()))
