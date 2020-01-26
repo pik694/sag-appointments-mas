@@ -12,7 +12,7 @@ defmodule SagAppointments.Doctor.Schedule do
     GenServer.start_link(__MODULE__, "#{clinic}:#{name}:#{surname}")
   end
 
-  def add_appointment(schedule, appointment) do
+  def add_appointment(schedule, %Appointment{} = appointment) do
     GenServer.cast(schedule, {:add_appointment, appointment})
   end
 
@@ -73,7 +73,12 @@ defmodule SagAppointments.Doctor.Schedule do
   defp move_from_future_to_history(%__MODULE__{history: history, future: future} = state) do
     Logger.debug("Moving future appointments to history in schedule")
     now = Timex.now()
-    {new_history, updated_future} = Enum.split_while(future, fn %{slot: slot} -> slot < now end)
+
+    {new_history, updated_future} =
+      Enum.split_while(future, fn %{slot: slot} ->
+        Timex.compare(slot, now) < 1
+      end)
+
     updated_history = history ++ new_history
     Logger.debug("Moved #{length(new_history)} appointments")
 
