@@ -3,10 +3,10 @@ defmodule SagAppointments.Doctor.ScheduleTest do
   use ExUnit.Case
 
   alias SagAppointments.Doctor.Schedule
-  alias SagAppointments.Doctor.Schedule.Appointment
+  alias SagAppointments.Appointment
 
   setup do
-    {:ok, pid} = SagAppointments.Doctor.Schedule.start_link({"XYZ", "John", "Smith"})
+    {:ok, pid} = SagAppointments.Doctor.Schedule.start_link()
     {:ok, schedule: pid}
   end
 
@@ -15,14 +15,14 @@ defmodule SagAppointments.Doctor.ScheduleTest do
     past = Timex.shift(Timex.now(), days: -2)
 
     [
-      %Appointment{slot: future, patient: "John Smith"},
-      %Appointment{slot: past, patient: "John Smith"}
+      %Appointment{id: 1, slot: future, patient: "John Smith"},
+      %Appointment{id: 2, slot: past, patient: "John Smith"}
     ]
   end
 
   test "clean state has no appointments", %{schedule: schedule} do
     assert Schedule.get_history(schedule) == {:ok, []}
-    assert Schedule.get_taken_slots(schedule) == {:ok, []}
+    assert Schedule.get_future_appointments(schedule) == {:ok, []}
   end
 
   @tag fixtures: [:appointments]
@@ -30,6 +30,16 @@ defmodule SagAppointments.Doctor.ScheduleTest do
     Schedule.add_appointment(schedule, appointment)
 
     assert Schedule.get_history(schedule) == {:ok, []}
-    assert Schedule.get_taken_slots(schedule) == {:ok, [appointment.slot]}
+    assert Schedule.get_future_appointments(schedule) == {:ok, [appointment]}
+  end
+
+  @tag fixtures: [:appointments] 
+  test "can delete an appointments", %{schedule: schedule, appointments: [appointment | _]} do
+    Schedule.add_appointment(schedule, appointment)
+    
+    Schedule.delete_appointment(schedule, appointment.id)
+
+    assert Schedule.get_history(schedule) == {:ok, []}
+    assert Schedule.get_future_appointments(schedule) == {:ok, []}
   end
 end

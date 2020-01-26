@@ -1,46 +1,44 @@
 defmodule SagAppointments.Doctor.Schedule do
-  require Logger
   use GenServer
 
-  defstruct [:name, history: [], future: []]
+  alias SagAppointments.Appointment
 
-  defmodule Appointment do
-    defstruct [:slot, :patient]
-  end
+  defstruct [history: [], future: []]
 
-  def start_link({clinic, name, surname}) do
-    GenServer.start_link(__MODULE__, "#{clinic}:#{name}:#{surname}")
+  def start_link() do
+    GenServer.start_link(__MODULE__, nil)
   end
 
   def add_appointment(schedule, %Appointment{} = appointment) do
-    GenServer.cast(schedule, {:add_appointment, appointment})
+    GenServer.cast(schedule, {:add, appointment})
+  end
+  
+  def delete_appointment(schedule, id) do
+    GenServer.cast(schedule, {:delete, id})
   end
 
   def get_history(schedule) do
     GenServer.call(schedule, :get_history)
   end
 
-  def get_taken_slots(schedule) do
-    GenServer.call(schedule, :get_taken_slots)
+  def get_future_appointments(schedule) do
+    GenServer.call(schedule, :get_future)
   end
 
   #### GEN SERVER 
-  def init(name) do
-    Logger.info("Starting schedule #{name}")
-    {:ok, struct(__MODULE__, name: name)}
+  def init(_) do
+    {:ok, struct(__MODULE__)}
   end
 
   def handle_call(:get_history, _from, %{history: history} = state) do
     {:reply, {:ok, history}, state}
   end
-
-  def handle_call(:get_taken_slots, _from, %{future: scheduled} = state) do
-    taken_slots = Enum.map(scheduled, fn %Appointment{slot: slot} -> slot end)
-    {:reply, {:ok, taken_slots}, state}
+  
+  def handle_call(:get_future, _from, %{future: future} = state) do
+    {:reply, {:ok, future}, state}
   end
 
-  def handle_cast({:add_appointment, %Appointment{} = appointment}, %{name: name} = state) do
-    Logger.info("Adding appointment to #{name} schedule #{appointment}")
+  def handle_cast({:add, %Appointment{} = appointment}, state) do
 
     {:ok, updated_state} = move_from_future_to_history(state)
 
@@ -54,24 +52,19 @@ defmodule SagAppointments.Doctor.Schedule do
      )}
   end
 
-  def handle_cast({:drop_appointment, slot}, %{name: name} = state) do
-    Logger.info("Deleting visit from #{name} schedule at #{slot}")
-
+  def handle_cast({:delete, id}, state) do
     {:ok, updated_state} = move_from_future_to_history(state)
+    
+    updated_state = Map.update!(
+      updated_state,
+      :future,
+      &Enum.filter(&1, fn %{id: appointment_id} -> appointment_id != id end)
+    )
 
-    case drop_slot(updated_state.future, slot) do
-      {:ok, updated_future} ->
-        Logger.info("Successfully dropped an appointment")
-        {:noreply, Map.put(updated_state, :future, updated_future)}
-
-      :error ->
-        Logger.info("Did not find appointment at given slot")
-        {:noreply, updated_state}
-    end
+    {:noreply, updated_state}
   end
 
   defp move_from_future_to_history(%__MODULE__{history: history, future: future} = state) do
-    Logger.debug("Moving future appointments to history in schedule")
     now = Timex.now()
 
     {new_history, updated_future} =
@@ -80,32 +73,15 @@ defmodule SagAppointments.Doctor.Schedule do
       end)
 
     updated_history = history ++ new_history
-    Logger.debug("Moved #{length(new_history)} appointments")
 
     updated_state = Map.merge(state, %{history: updated_history, future: updated_future})
     {:ok, updated_state}
   end
 
-  defp drop_slot(appointments, slot) do
-    case do_drop_slot(appointments, slot) do
-      ^appointments -> :error
-      updated_appointments -> {:ok, updated_appointments}
-    end
-  end
-
-  defp do_drop_slot([], _slot), do: []
-
-  defp do_drop_slot([h | t], slot) do
-    if h.slot == slot do
-      t
-    else
-      [h | do_drop_slot(t, slot)]
-    end
-  end
 end
 
 defimpl String.Chars, for: SagAppointments.Doctor.Schedule.Appointment do
-  def to_string(%SagAppointments.Doctor.Schedule.Appointment{patient: patient, slot: slot}) do
-    "Appointment(#{patient}, #{slot})"
+  def to_string(%SagAppointments.Doctor.Schedule.Appointment{id: id, patient: patient, slot: slot}) do
+    "Appointment(id: #{id}, patient: #{patient}, slot: #{slot})"
   end
 end
