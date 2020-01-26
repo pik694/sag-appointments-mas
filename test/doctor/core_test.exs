@@ -13,7 +13,7 @@ defmodule SagAppointments.Doctor.CoreTest do
     struct!(Doctor,
       name: "John",
       surname: "Smith",
-      field: "Pediatrician", 
+      field: "Pediatrician",
       clinic: "XYZ",
       working_hours: @default_days,
       visit_time: 10
