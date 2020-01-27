@@ -1,9 +1,10 @@
 defmodule SagAppointments.Doctor.Schedule do
   use GenServer
 
+  defstruct [history: [], future: []]
+  
   alias SagAppointments.Appointment
 
-  defstruct [history: [], future: []]
 
   def start_link() do
     GenServer.start_link(__MODULE__, nil)
@@ -78,10 +79,4 @@ defmodule SagAppointments.Doctor.Schedule do
     {:ok, updated_state}
   end
 
-end
-
-defimpl String.Chars, for: SagAppointments.Doctor.Schedule.Appointment do
-  def to_string(%SagAppointments.Doctor.Schedule.Appointment{id: id, patient: patient, slot: slot}) do
-    "Appointment(id: #{id}, patient: #{patient}, slot: #{slot})"
-  end
 end
