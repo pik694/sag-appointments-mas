@@ -16,11 +16,6 @@ defmodule SagAppointments.DoctorTest do
     visit_time: 10
   }
 
-  deffixture relay() do
-    {:ok, relay} = Relay.start_link(100)
-    relay
-  end
-
   deffixture schedule() do
     {:ok, schedule} = Schedule.start_link()
     schedule
