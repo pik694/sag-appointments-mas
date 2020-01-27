@@ -1,0 +1,32 @@
+name: Elixir CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-slim
+
+    steps:
+    - name: Cache
+      uses: actions/cache@v1.0.3
+      with:
+        # A directory to store and save the cache
+        path: .cache/sag-appointment-mas
+        # An explicit key for restoring and saving the cache
+        key: cache-sag-appointment-mas
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        mix local.rebar --force
+        mix local.hex --force
+        mix deps.get
+    - name: Run Linter
+      run: |
+        mix format --check-formatted
+    - name: Run Tests
+      run: |
+        mix test
