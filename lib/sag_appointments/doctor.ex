@@ -2,7 +2,7 @@ defmodule SagAppointments.Doctor do
   require Logger
   use GenServer
 
-  alias SagAppointments.Message
+  alias SagAppointments.Appointment
   alias SagAppointments.Doctor.Schedule
   alias SagAppointments.Doctor.Core
 
@@ -10,10 +10,9 @@ defmodule SagAppointments.Doctor do
                          |> Map.new()
 
   defstruct [
+    :id,
     :name,
-    :surname,
     :field,
-    :clinic,
     :working_hours,
     :visit_time,
     :forward_slots,
@@ -35,33 +34,74 @@ defmodule SagAppointments.Doctor do
     {:ok, state}
   end
 
-  def handle_cast(%Message{message: {:query, :slots}} = message, state) do
-    Logger.info("Received free slots query")
-    {begin_date, end_date} = message.content
-    {:ok, taken_slots} = Schedule.get_taken_slots(state.schedule)
-    available_slots = Core.available_slots(state, taken_slots, begin_date, end_date)
+  def handle_cast({{query_id, from}, {:query_available, opts}}, state) do
+    if compare_name_and_field(state, opts) do
+      Logger.info("Listing available slots")
 
-    GenServer.cast(message.from, %Message{
-      message: {:reply, :slots},
-      content: available_slots,
-      from: self(),
-      query: message
-    })
+      {:ok, future_appointments} = Schedule.get_future_appointments(state.schedule)
+      available_slots = Core.available_slots(state, future_appointments, Timex.now(), opts)
+      GenServer.cast(from, {:reply, query_id, {state.id, state.name, available_slots}})
+    else
+      GenServer.cast(from, {:reply, query_id, :irrelevant})
+    end
 
     {:noreply, state}
   end
 
-  def handle_call(%Message{message: :add_appointment} = message, _from, state) do
-    Logger.info("Adding appointment:")
-    {slot, patient} = message.content
+  def handle_cast({{query_id, from}, {:query_by_patient, patient_id}}, state) do
+    Logger.info("Querying appointments of patient: #{patient_id}")
 
-    response =
-      with {:ok, taken} <- Schedule.get_taken_slots(state.schedule),
-           :ok <- Core.check_slot_available(state, taken, slot) do
-        Schedule.add_appointment(state.schedule, %Schedule.Appointment{slot: slot, patient: patient})
-        :ok
+    {:ok, history} = Schedule.get_history(state.schedule)
+    {:ok, future} = Schedule.get_future_appointments(state.schedule)
+
+    case Core.get_appointments_for_patient(history, future, patient_id) do
+      [] ->
+        GenServer.cast(from, {:reply, query_id, :irrelevant})
+
+      relevant ->
+        GenServer.cast(from, {:reply, query_id, {state.id, state.name, state.field, relevant}})
+    end
+
+    {:noreply, state}
+  end
+
+  def handle_cast({{query_id, from}, {:add_appointment, doctor_id, patient_id, slot}}, state) do
+    if doctor_id == state.id do
+      Logger.info("Trying to add an appointment")
+
+      {:ok, taken} = Schedule.get_future_appointments(state.schedule)
+      appointment_id = Appointment.get_unique_id()
+
+      case Core.try_create_appointment(
+             state,
+             taken,
+             Timex.now(),
+             slot,
+             patient_id,
+             appointment_id
+           ) do
+        {:ok, appointment} ->
+          Logger.info("Successfully created appointment #{appointment.id}")
+          Schedule.add_appointment(state.schedule, appointment)
+          GenServer.cast(from, {:reply, query_id, {:ok, appointment.id}})
+
+        error ->
+          Logger.warn("Could not create an appointment. Reason: #{error}")
+          GenServer.cast(from, {:reply, query_id, error})
       end
+    end
 
-    {:reply, response, state}
+    {:noreply, state}
+  end
+
+  def handle_cast({{_query_id, _from}, {:delete_appointment, appointment_id}}, state) do
+    Logger.info("Deleting appointment #{appointment_id}")
+    Schedule.delete_appointment(state.schedule, appointment_id)
+    {:noreply, state}
+  end
+
+  defp compare_name_and_field(state, opts) do
+    Keyword.get(opts, :name, state.name) == state.name &&
+      Keyword.get(opts, :field, state.field) == state.field
   end
 end

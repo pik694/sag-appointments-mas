@@ -1,18 +1,17 @@
 defmodule SagAppointments.DoctorTest do
   use ExUnitFixtures
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias SagAppointments.TestHelpers.Relay
   alias SagAppointments.Doctor
   alias SagAppointments.Doctor.Schedule
-  alias SagAppointments.Message
 
   @default_days %{1 => %{start: 10, end: 17}, 3 => %{start: 14, end: 15}}
   @doctor %{
-    name: "John",
-    surname: "Smith",
+    id: 0,
+    name: "John Smith",
     field: "Pediatrician",
-    clinic: "XYZ",
+    forward_slots: Timex.Duration.from_weeks(4),
     working_hours: @default_days,
     visit_time: 10
   }
@@ -22,13 +21,8 @@ defmodule SagAppointments.DoctorTest do
     relay
   end
 
-  deffixture available_slots_query() do
-    next_monday = Timex.shift(Timex.today(), days: 8 - Timex.weekday(Timex.today()))
-    %Message{message: {:query, :slots}, content: {next_monday, next_monday}}
-  end
-  
   deffixture schedule() do
-    {:ok, schedule} = Schedule.start_link({@doctor.clinic, @doctor.name, @doctor.surname})
+    {:ok, schedule} = Schedule.start_link()
     schedule
   end
 
@@ -37,68 +31,80 @@ defmodule SagAppointments.DoctorTest do
     doctor
   end
 
-  deffixture available_slot(doctor, available_slots_query, relay) do 
-    {:ok, %Message{content: [slot| _]}} = Relay.send_message(relay, available_slots_query, doctor)
-    slot
-  end
-
-  @tag fixtures: [:available_slots_query, :doctor, :relay]
+  @tag fixtures: [:doctor, :relay]
   test "doctor can fetch available slots when state is empty", %{
     relay: relay,
-    doctor: doctor,
-    available_slots_query: query
+    doctor: doctor
   } do
-    {:ok, %Message{message: {:reply, :slots}} = reply} = Relay.send_message(relay, query, doctor)
-    assert is_list(reply.content)
+    {:ok, {doctor_id, doctor_name, slots}} =
+      Relay.send_message(relay, {:query_available, day: Timex.today()}, doctor)
+
+    assert is_list(slots)
+    assert doctor_id == @doctor.id && doctor_name == @doctor.name
+
+    assert Relay.send_message(
+             relay,
+             {:query_available, name: "Jack Jones", day: Timex.today()},
+             doctor
+           ) == {:ok, :irrelevant}
   end
 
-  @tag fixtures: [:available_slots_query, :doctor, :schedule, :relay]
-  test "doctor can fetch available slots when state is not empty", %{
+  @tag fixtures: [:doctor, :relay]
+  test "doctor does not fetch available slots when query irrelevant", %{
     relay: relay,
-    doctor: doctor,
-    available_slots_query: query,
-    schedule: schedule
+    doctor: doctor
   } do
-    {:ok, %Message{content: all_slots}} = Relay.send_message(relay, query, doctor)
-    Schedule.add_appointment(schedule, appointment(hd(all_slots)))
+    assert Relay.send_message(
+             relay,
+             {:query_available, name: "Jack Jones", day: Timex.today()},
+             doctor
+           ) == {:ok, :irrelevant}
 
-    {:ok, %Message{content: slots}} = GenServer.call(relay, {doctor, query})
-    assert slots == tl(all_slots)
+    assert Relay.send_message(
+             relay,
+             {:query_available, field: "Dentist", day: Timex.today()},
+             doctor
+           ) == {:ok, :irrelevant}
   end
 
-  @tag fixtures: [:available_slots_query, :doctor, :schedule, :relay]
-  test "doctor fetches empty list when there is no available slot", %{
+  @tag fixtures: [:doctor, :relay]
+  test "doctor can add an appointment", %{
     relay: relay,
-    doctor: doctor,
-    available_slots_query: query,
-    schedule: schedule
+    doctor: doctor
   } do
-    {:ok, %Message{content: all_slots}} =  Relay.send_message(relay, query, doctor)
+    query_opts = [from: Timex.today(), until: Timex.shift(Timex.today(), weeks: 1)]
 
-    all_slots
-    |> Enum.map(&appointment/1)
-    |> Enum.each(&Schedule.add_appointment(schedule, &1))
+    {:ok, {doctor_id, doctor_name, [slot | _]}} =
+      Relay.send_message(relay, {:query_available, query_opts}, doctor)
 
-    {:ok, %Message{content: slots}} = Relay.send_message(relay, query, doctor)
-    assert Enum.empty?(slots)
-  end
+    {:ok, {:ok, _appointment_id}} =
+      Relay.send_message(relay, {:add_appointment, doctor_id, 0, slot}, doctor)
 
-  @tag fixtures: [:available_slots_query, :available_slot, :doctor, :relay]
-  test "doctor can add appointment", %{
-    relay: relay,
-    doctor: doctor,
-    available_slots_query: query,
-    available_slot: slot,
-  } do 
+    {:ok, {^doctor_id, ^doctor_name, slots}} =
+      Relay.send_message(relay, {:query_available, query_opts}, doctor)
 
-    message = %Message{message: :add_appointment, content: {slot, "Jake Jones"}}
-
-    :ok = Relay.send_message(relay, message, doctor, :sync) 
-    {:ok, %Message{content: slots}} = Relay.send_message(relay, query, doctor)
-    
     assert not Enum.member?(slots, slot)
-
   end
-  
-  defp appointment(slot), do: %Schedule.Appointment{slot: slot, patient: "Jake Jones"}
+
+  @tag fixtures: [:doctor, :relay]
+  test "doctor can delete an appointment", %{
+    relay: relay,
+    doctor: doctor
+  } do
+    query_opts = [from: Timex.today(), until: Timex.shift(Timex.today(), weeks: 1)]
+
+    {:ok, {doctor_id, _, [slot | _]}} =
+      Relay.send_message(relay, {:query_available, query_opts}, doctor)
+
+    {:ok, {:ok, appointment_id}} =
+      Relay.send_message(relay, {:add_appointment, doctor_id, 0, slot}, doctor)
+
+    Relay.send_message(relay, {:delete_appointment, appointment_id}, doctor)
+    # just delete some non-existent appointment
+    Relay.send_message(relay, {:delete_appointment, -100}, doctor)
+
+    {:ok, {_, _, slots}} = Relay.send_message(relay, {:query_available, query_opts}, doctor)
+
+    assert Enum.member?(slots, slot)
+  end
 end

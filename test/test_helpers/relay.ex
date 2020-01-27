@@ -8,21 +8,18 @@ defmodule SagAppointments.TestHelpers.Relay do
   end
 
   def init(wait_period), do: {:ok, %{wait_period: wait_period, wait_rounds: 0}}
-  
-  def send_message(relay, message, receiver, sync \\ :async) do
-    case sync do
-      :async -> GenServer.call(relay, {receiver, message})
-      :sync -> GenServer.call(receiver, message)
-    end
+
+  def send_message(relay, message, receiver) do
+    GenServer.call(relay, {receiver, message})
   end
 
-  def handle_call({who, request}, from, state) do
-    GenServer.cast(who, Map.put(request, :from, self()))
+  def handle_call({receiver, request}, from, state) do
+    GenServer.cast(receiver, {{0, self()}, request})
     Process.send_after(self(), :check, div(state.wait_period, @wait_rounds))
     {:noreply, Map.put_new(state, :from, from)}
   end
 
-  def handle_cast(reply, state) do
+  def handle_cast({:reply, _, reply}, state) do
     {:noreply, Map.put(state, :reply, reply)}
   end
 
@@ -34,7 +31,7 @@ defmodule SagAppointments.TestHelpers.Relay do
 
       :error ->
         if Map.fetch!(state, :wait_rounds) == @wait_rounds do
-          GenServer.reply(Map.fetch!(state, :from), {:error, :no_response})
+          GenServer.reply(Map.fetch!(state, :from), :no_response)
           {:noreply, clean_state(state)}
         else
           Process.send_after(self(), :check, div(state.wait_period, @wait_rounds))

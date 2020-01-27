@@ -33,10 +33,10 @@ defmodule SagAppointments.Doctor.ScheduleTest do
     assert Schedule.get_future_appointments(schedule) == {:ok, [appointment]}
   end
 
-  @tag fixtures: [:appointments] 
+  @tag fixtures: [:appointments]
   test "can delete an appointments", %{schedule: schedule, appointments: [appointment | _]} do
     Schedule.add_appointment(schedule, appointment)
-    
+
     Schedule.delete_appointment(schedule, appointment.id)
 
     assert Schedule.get_history(schedule) == {:ok, []}

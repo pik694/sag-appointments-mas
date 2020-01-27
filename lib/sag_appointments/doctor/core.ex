@@ -2,7 +2,7 @@ defmodule SagAppointments.Doctor.Core do
   alias Timex.Interval
   alias Timex.Duration
 
-  alias SagAppointments.{Doctor, Appointment}
+  alias SagAppointments.Appointment
 
   def get_appointments_for_patient(historical, future, patient_id) do
     historical
