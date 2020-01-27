@@ -19,8 +19,13 @@ defmodule SagAppointments.Doctor do
     :schedule
   ]
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts)
+  def start_link(opts, supervisor \\ nil) do
+    temp_schedule = case supervisor do
+      nil -> []
+      pid when is_pid(pid) ->  [schedule: {:supervisor, pid}]
+    end
+
+    GenServer.start_link(__MODULE__, opts ++ temp_schedule)
   end
 
   def init(opts) do
@@ -31,6 +36,7 @@ defmodule SagAppointments.Doctor do
     ]
 
     state = struct!(__MODULE__, Keyword.merge(default_values, opts))
+    :ok = Process.send(self(), :set_schedule, [:nosuspend])
     {:ok, state}
   end
 
@@ -70,7 +76,7 @@ defmodule SagAppointments.Doctor do
       Logger.info("Trying to add an appointment")
 
       {:ok, taken} = Schedule.get_future_appointments(state.schedule)
-      appointment_id = Counters.appointment_id
+      appointment_id = Counters.appointment_id()
 
       case Core.try_create_appointment(
              state,
@@ -98,6 +104,18 @@ defmodule SagAppointments.Doctor do
     Logger.info("Deleting appointment #{appointment_id}")
     Schedule.delete_appointment(state.schedule, appointment_id)
     {:noreply, state}
+  end
+
+  def handle_info(:set_schedule, state) do
+    case state.schedule do
+      {:supervisor, supervisor} ->
+        Logger.info("Setting doctor #{state.id} schedule")
+        schedule = SagAppointments.Doctor.Supervisor.child(supervisor, :schedule)
+        {:noreply, Map.put(state, :schedule, schedule)}
+
+      _pid ->
+        {:noreply, state}
+    end
   end
 
   defp compare_name_and_field(state, opts) do
