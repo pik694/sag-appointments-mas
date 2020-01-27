@@ -19,7 +19,7 @@ defmodule SagAppointments.TestHelpers.Relay do
     {:noreply, Map.put_new(state, :from, from)}
   end
 
-  def handle_cast({:reply, _, reply}, state) do
+  def handle_cast({:reply, _, _, reply}, state) do
     {:noreply, Map.put(state, :reply, reply)}
   end
 

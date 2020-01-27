@@ -20,10 +20,11 @@ defmodule SagAppointments.Doctor do
   ]
 
   def start_link(opts, supervisor \\ nil) do
-    temp_schedule = case supervisor do
-      nil -> []
-      pid when is_pid(pid) ->  [schedule: {:supervisor, pid}]
-    end
+    temp_schedule =
+      case supervisor do
+        nil -> []
+        pid when is_pid(pid) -> [schedule: {:supervisor, pid}]
+      end
 
     GenServer.start_link(__MODULE__, opts ++ temp_schedule)
   end
@@ -46,9 +47,9 @@ defmodule SagAppointments.Doctor do
 
       {:ok, future_appointments} = Schedule.get_future_appointments(state.schedule)
       available_slots = Core.available_slots(state, future_appointments, Timex.now(), opts)
-      GenServer.cast(from, {:reply, query_id, {state.id, state.name, available_slots}})
+      GenServer.cast(from, {:reply, query_id, self(), {state.id, state.name, available_slots}})
     else
-      GenServer.cast(from, {:reply, query_id, :irrelevant})
+      GenServer.cast(from, {:reply, query_id, self(), :irrelevant})
     end
 
     {:noreply, state}
@@ -62,10 +63,13 @@ defmodule SagAppointments.Doctor do
 
     case Core.get_appointments_for_patient(history, future, patient_id) do
       [] ->
-        GenServer.cast(from, {:reply, query_id, :irrelevant})
+        GenServer.cast(from, {:reply, query_id, self(), :irrelevant})
 
       relevant ->
-        GenServer.cast(from, {:reply, query_id, {state.id, state.name, state.field, relevant}})
+        GenServer.cast(
+          from,
+          {:reply, query_id, self(), {state.id, state.name, state.field, relevant}}
+        )
     end
 
     {:noreply, state}
@@ -89,11 +93,11 @@ defmodule SagAppointments.Doctor do
         {:ok, appointment} ->
           Logger.info("Successfully created appointment #{appointment.id}")
           Schedule.add_appointment(state.schedule, appointment)
-          GenServer.cast(from, {:reply, query_id, {:ok, appointment.id}})
+          GenServer.cast(from, {:reply, query_id, self(), {:ok, appointment.id}})
 
         error ->
           Logger.warn("Could not create an appointment. Reason: #{error}")
-          GenServer.cast(from, {:reply, query_id, error})
+          GenServer.cast(from, {:reply, self(), query_id, error})
       end
     end
 
