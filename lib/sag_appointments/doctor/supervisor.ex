@@ -17,12 +17,13 @@ defmodule SagAppointments.Doctor.Supervisor do
   end
 
   def child(supervisor, id) do
-     maybe_child = supervisor
-    |> Supervisor.which_children()
-    |> Enum.find(fn
-      {^id, pid, _, _} when is_pid(pid) -> true
-      _ -> false
-    end)
+    maybe_child =
+      supervisor
+      |> Supervisor.which_children()
+      |> Enum.find(fn
+        {^id, pid, _, _} when is_pid(pid) -> true
+        _ -> false
+      end)
 
     case maybe_child do
       {_, pid, _, _} -> pid

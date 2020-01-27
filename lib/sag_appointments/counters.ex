@@ -1,5 +1,4 @@
 defmodule SagAppointments.Counters do
- 
   def init do
     __MODULE__ = :ets.new(__MODULE__, [:public, :named_table])
     true = :ets.insert_new(__MODULE__, {:appointment, 0})
