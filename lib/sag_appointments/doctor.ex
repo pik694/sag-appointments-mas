@@ -2,7 +2,7 @@ defmodule SagAppointments.Doctor do
   require Logger
   use GenServer
 
-  alias SagAppointments.Appointment
+  alias SagAppointments.Counters
   alias SagAppointments.Doctor.Schedule
   alias SagAppointments.Doctor.Core
 
@@ -70,7 +70,7 @@ defmodule SagAppointments.Doctor do
       Logger.info("Trying to add an appointment")
 
       {:ok, taken} = Schedule.get_future_appointments(state.schedule)
-      appointment_id = Appointment.get_unique_id()
+      appointment_id = Counters.appointment_id
 
       case Core.try_create_appointment(
              state,

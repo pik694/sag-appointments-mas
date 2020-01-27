@@ -1,10 +1,10 @@
 defmodule SagAppointments.Application do
   use Application
 
-  alias SagAppointments.Appointment
+  alias SagAppointments.Counters
 
   def start(_type, _args) do
-    :ok = Appointment.init()
+    :ok = Counters.init()
 
     children = []
 
