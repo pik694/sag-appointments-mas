@@ -119,8 +119,7 @@ defmodule SagAppointments.DoctorTest do
     {:ok, {doctor_id, _, [slot | _]}} =
       Relay.send_message(relay, {:query_available, query_opts}, doctor)
 
-    {:ok, {:ok, appointment_id}} =
-      Relay.send_message(relay, {:add_appointment, doctor_id, 0, slot}, doctor)
+    Relay.send_message(relay, {:add_appointment, doctor_id, 0, slot}, doctor)
 
     {:ok, {^doctor_id, doctor_name, doctor_field, [_]}} =
       Relay.send_message(
