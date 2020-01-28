@@ -16,11 +16,6 @@ defmodule SagAppointments.DoctorTest do
     visit_time: 10
   }
 
-  deffixture relay() do
-    {:ok, relay} = Relay.start_link(100)
-    relay
-  end
-
   deffixture schedule() do
     {:ok, schedule} = Schedule.start_link()
     schedule
@@ -106,5 +101,33 @@ defmodule SagAppointments.DoctorTest do
     {:ok, {_, _, slots}} = Relay.send_message(relay, {:query_available, query_opts}, doctor)
 
     assert Enum.member?(slots, slot)
+  end
+
+  @tag fixtures: [:doctor, :relay]
+  test "doctor can query by patient", %{
+    relay: relay,
+    doctor: doctor
+  } do
+    query_opts = [from: Timex.today(), until: Timex.shift(Timex.today(), weeks: 1)]
+
+    assert Relay.send_message(
+             relay,
+             {:query_by_patient, 0},
+             doctor
+           ) == {:ok, :irrelevant}
+
+    {:ok, {doctor_id, _, [slot | _]}} =
+      Relay.send_message(relay, {:query_available, query_opts}, doctor)
+
+    Relay.send_message(relay, {:add_appointment, doctor_id, 0, slot}, doctor)
+
+    {:ok, {^doctor_id, doctor_name, doctor_field, [_]}} =
+      Relay.send_message(
+        relay,
+        {:query_by_patient, 0},
+        doctor
+      )
+
+    assert doctor_name == @doctor.name && doctor_field == @doctor.field
   end
 end

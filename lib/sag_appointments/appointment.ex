@@ -1,15 +1,5 @@
 defmodule SagAppointments.Appointment do
   defstruct [:id, :slot, :patient]
-
-  def init do
-    :appointments_id = :ets.new(:appointments_id, [:public, :named_table])
-    true = :ets.insert_new(:appointments_id, {:unique_id, 0})
-    :ok
-  end
-
-  def get_unique_id do
-    :ets.update_counter(:appointments_id, :unique_id, 1)
-  end
 end
 
 defimpl String.Chars, for: SagAppointments.Appointment do
