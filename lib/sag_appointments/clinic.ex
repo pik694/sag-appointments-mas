@@ -2,8 +2,8 @@ defmodule SagAppointments.Clinic do
   require Logger
   use GenServer
 
-  # @cleanup_period 100
-  # @wait_threshold 200
+  @cleanup_period 100
+  @wait_threshold 500
 
   defstruct [:name, :supervisor, query_id: 0, queries: %{}]
 
@@ -12,8 +12,7 @@ defmodule SagAppointments.Clinic do
   end
 
   def init({name, supervisor}) do
-    # TODO
-    # Process.send_after(self(), :clean_stale_queries, @cleanup_period)
+    Process.send_after(self(), :clean_stale_queries, @cleanup_period)
     {:ok, %__MODULE__{name: name, supervisor: supervisor}}
   end
 
@@ -45,6 +44,28 @@ defmodule SagAppointments.Clinic do
         Logger.info("Received irrelevant response from #{from}")
         {:noreply, state}
     end
+  end
+
+  def handle_info(:clean_stale_queries, state) do
+    past_threshold = Timex.shift(Timex.now(), milliseconds: -@wait_threshold)
+    Logger.info("Cleaning stale queries")
+
+    {stale_queries, valid_queries} =
+      Enum.split_with(state.queries, fn {_, %{query_time: query_time}} ->
+        Timex.compare(query_time, past_threshold) < 1
+      end)
+
+    Logger.info("Found #{length(stale_queries)} stale queries")
+
+    Enum.each(stale_queries, &send_response(state, &1))
+
+    Process.send_after(self(), :clean_stale_queries, @cleanup_period)
+    {:noreply, Map.put(state, :queries, Map.new(valid_queries))}
+  end
+
+  def send_response(state, {_query_id, query}) do
+    {to, response} = build_response(state, query)
+    GenServer.cast(to, response)
   end
 
   defp handle_response(state, query_id, from, response) do
