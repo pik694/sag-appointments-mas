@@ -8,17 +8,9 @@ defmodule SagAppointments.ClinicTest do
   def next_monday(), do: Timex.shift(Timex.today(), days: 8 - Timex.weekday(Timex.today()))
 
   deffixture clinic(doctors_spec) do
-    {:ok, supervisor} = Clinic.Supervisor.start_link("XYZ", doctors_spec)
+    {:ok, supervisor} = Clinic.Supervisor.start_link({"XYZ", doctors_spec})
 
-    {:clinic, clinic, _, _} =
-      supervisor
-      |> Supervisor.which_children()
-      |> Enum.find(fn
-        {:clinic, _, _, _} -> true
-        _ -> false
-      end)
-
-    clinic
+    Clinic.Supervisor.clinic(supervisor)
   end
 
   @tag fixtures: [:clinic, :relay]
@@ -56,7 +48,7 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", result: {:ok, appointemnt_id}}} =
+    {:ok, %{clinic_name: "XYZ", responses: [{:ok, appointemnt_id}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},
@@ -75,7 +67,7 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", result: {:ok, _}}} =
+    {:ok, %{clinic_name: "XYZ", responses: [{:ok, _}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},
@@ -99,7 +91,7 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", result: {:ok, appointemnt_id}}} =
+    {:ok, %{clinic_name: "XYZ", responses: [{:ok, appointemnt_id}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},

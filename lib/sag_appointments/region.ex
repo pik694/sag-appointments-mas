@@ -1,4 +1,4 @@
-defmodule SagAppointments.Clinic do
+defmodule SagAppointments.Region do
   require Logger
   use GenServer
 
@@ -17,15 +17,21 @@ defmodule SagAppointments.Clinic do
   end
 
   def handle_cast({from, request}, state) do
-    children = SagAppointments.Clinic.Supervisor.doctors(state.supervisor)
-    {state_incremented, query_id} = get_unique_query_id(state)
+    if filter_request(state, request) do
+      children = SagAppointments.Region.Supervisor.clinics(state.supervisor)
+      {state_incremented, query_id} = get_unique_query_id(state)
 
-    updated_state =
-      build_query(query_id, children, from, request)
-      |> exec()
-      |> update_state(state_incremented)
+      updated_state =
+        build_query(query_id, children, from, request)
+        |> exec()
+        |> update_state(state_incremented)
 
-    {:noreply, updated_state}
+      {:noreply, updated_state}
+    else
+      {id, pid} = from
+      GenServer.cast(pid, {:reply, id, self(), :irrelevant})
+      {:noreply, state}
+    end
   end
 
   def handle_cast({:reply, query_id, from, response}, state) do
@@ -68,6 +74,15 @@ defmodule SagAppointments.Clinic do
     GenServer.cast(to, response)
   end
 
+  defp filter_request(%{name: region_name}, {:query_available, opts}) do
+    case Keyword.fetch(opts, :region) do
+      :error -> true
+      {:ok, region} -> region == region_name
+    end
+  end
+
+  defp filter_request(_, _), do: true
+
   defp handle_response(state, query_id, from, response) do
     with {:ok, query} <- Map.fetch(state.queries, query_id),
          true <- Enum.member?(query.waiting_for_response, from) do
@@ -97,48 +112,25 @@ defmodule SagAppointments.Clinic do
 
   defp should_response?(_, _), do: false
 
-  defp build_response(state, %{request: request, responses: responses, from: {query_id, from}}) do
+  defp build_response(state, %{responses: responses, from: {query_id, from}}) do
     filtered_responses =
-      Enum.filter(responses, fn
+      responses
+      |> Enum.filter(fn
         :irrelevant -> false
         _ -> true
       end)
-
-    {from,
-     {:reply, query_id, self(), do_build_response(elem(request, 0), filtered_responses, state)}}
-  end
-
-  defp do_build_response(_, [], _), do: :irrelevant
-
-  defp do_build_response(:add_appointment, [response], state) do
-    %{clinic_name: state.name, responses: [response]}
-  end
-
-  defp do_build_response(:query_by_patient, responses, state) do
-    response =
-      responses
-      |> Enum.map(fn {doctor_id, doctor_name, doctor_field, slots} ->
-        %{
-          doctor_id: doctor_id,
-          doctor_name: doctor_name,
-          doctor_field: doctor_field,
-          slots: slots
-        }
+      |> Enum.filter(fn
+        %{responses: []} -> false
+        _ -> true
       end)
-      |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
 
-    %{clinic_name: state.name, responses: response}
+    {from, {:reply, query_id, self(), do_build_response(filtered_responses, state)}}
   end
 
-  defp do_build_response(:query_available, responses, state) do
-    response =
-      responses
-      |> Enum.map(fn {doctor_id, doctor_name, slots} ->
-        %{doctor_id: doctor_id, doctor_name: doctor_name, slots: slots}
-      end)
-      |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
+  defp do_build_response([], _), do: :irrelevant
 
-    %{clinic_name: state.name, responses: response}
+  defp do_build_response(responses, state) do
+    %{region: state.name, responses: responses}
   end
 
   defp build_query(query_id, children, from, request) do

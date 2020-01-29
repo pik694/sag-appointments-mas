@@ -5,7 +5,7 @@ defmodule SagAppointments.Clinic.Supervisor do
   alias SagAppointments.Doctor
   alias SagAppointments.Counters
 
-  def start_link(clinic_name, doctors_opts) do
+  def start_link({clinic_name, doctors_opts}) do
     Supervisor.start_link(__MODULE__, {clinic_name, doctors_opts})
   end
 
@@ -23,6 +23,16 @@ defmodule SagAppointments.Clinic.Supervisor do
 
     clinic = %{id: :clinic, start: {Clinic, :start_link, [clinic_name, self()]}, type: :worker}
     Supervisor.init([clinic | doctors], strategy: :one_for_one)
+  end
+
+  def clinic(supervisor) do
+    supervisor
+    |> Supervisor.which_children()
+    |> Enum.find(fn
+      {:clinic, _, _, _} -> true
+      _ -> false
+    end)
+    |> elem(1)
   end
 
   def doctors(supervisor) do
