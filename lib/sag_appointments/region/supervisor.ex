@@ -1,19 +1,21 @@
 defmodule SagAppointments.Region.Supervisor do
   use Supervisor
 
+  alias SagAppointments.Region
   alias SagAppointments.Clinic
+  alias SagAppointments.Counters
 
-  def start_link(region_name, clinics_opts) do
+  def start_link({region_name, clinics_opts}) do
     Supervisor.start_link(__MODULE__, {region_name, clinics_opts})
   end
 
   def init({region_name, clinics_opts}) do
     clinics =
       clinics_opts
-      |> Enum.map(fn opts ->
+      |> Enum.map(fn args ->
         %{
-          id: Keyword.fetch!(opts, :id),
-          start: {Doctor.Supervisor, :start_link, [opts]},
+          id: Counters.clinic_id(),
+          start: {Clinic.Supervisor, :start_link, [args]},
           type: :supervisor
         }
       end)
@@ -32,5 +34,4 @@ defmodule SagAppointments.Region.Supervisor do
     |> Enum.map(fn {_, pid, _, _} -> Clinic.Supervisor.clinic(pid) end)
     |> Enum.filter(&is_pid/1)
   end
-
 end
