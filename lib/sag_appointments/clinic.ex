@@ -111,7 +111,7 @@ defmodule SagAppointments.Clinic do
   defp do_build_response(_, [], _), do: :irrelevant
 
   defp do_build_response(:add_appointment, [response], state) do
-    %{clinic_name: state.name, result: response}
+    %{clinic_name: state.name, responses: [response]}
   end
 
   defp do_build_response(:query_by_patient, responses, state) do
