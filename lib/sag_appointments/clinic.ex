@@ -31,31 +31,31 @@ defmodule SagAppointments.Clinic do
   def handle_cast({:reply, query_id, from, response}, state) do
     case handle_response(state, query_id, from, response) do
       {:ok, updated_state, {to, response}} ->
-        Logger.info("Received response from #{from}")
-        Logger.info("Sending response to #{to}")
+        Logger.info("Received response from #{inspect(from)}")
+        Logger.info("Sending response to #{inspect(to)}")
         GenServer.cast(to, response)
         {:noreply, updated_state}
 
       {:ok, updated_state} ->
-        Logger.info("Received response from #{from}")
+        Logger.info("Received response from #{inspect(from)}")
         {:noreply, updated_state}
 
       _ ->
-        Logger.info("Received irrelevant response from #{from}")
+        Logger.info("Received irrelevant response from #{inspect(from)}")
         {:noreply, state}
     end
   end
 
   def handle_info(:clean_stale_queries, state) do
     past_threshold = Timex.shift(Timex.now(), milliseconds: -@wait_threshold)
-    Logger.info("Cleaning stale queries")
+    Logger.debug("Cleaning stale queries")
 
     {stale_queries, valid_queries} =
       Enum.split_with(state.queries, fn {_, %{query_time: query_time}} ->
         Timex.compare(query_time, past_threshold) < 1
       end)
 
-    Logger.info("Found #{length(stale_queries)} stale queries")
+    Logger.debug("Found #{length(stale_queries)} stale queries")
 
     Enum.each(stale_queries, &send_response(state, &1))
 
@@ -111,7 +111,7 @@ defmodule SagAppointments.Clinic do
   defp do_build_response(_, [], _), do: :irrelevant
 
   defp do_build_response(:add_appointment, [response], state) do
-    %{clinic_name: state.name, responses: [response]}
+    %{clinic: state.name, responses: [response]}
   end
 
   defp do_build_response(:query_by_patient, responses, state) do
@@ -127,7 +127,7 @@ defmodule SagAppointments.Clinic do
       end)
       |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
 
-    %{clinic_name: state.name, responses: response}
+    %{clinic: state.name, responses: response}
   end
 
   defp do_build_response(:query_available, responses, state) do
@@ -138,7 +138,7 @@ defmodule SagAppointments.Clinic do
       end)
       |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
 
-    %{clinic_name: state.name, responses: response}
+    %{clinic: state.name, responses: response}
   end
 
   defp build_query(query_id, children, from, request) do
