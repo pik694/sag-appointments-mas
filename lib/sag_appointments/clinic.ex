@@ -31,17 +31,17 @@ defmodule SagAppointments.Clinic do
   def handle_cast({:reply, query_id, from, response}, state) do
     case handle_response(state, query_id, from, response) do
       {:ok, updated_state, {to, response}} ->
-        Logger.info("Received response from #{from}")
-        Logger.info("Sending response to #{to}")
+        Logger.info("Received response from #{inspect(from)}")
+        Logger.info("Sending response to #{inspect(to)}")
         GenServer.cast(to, response)
         {:noreply, updated_state}
 
       {:ok, updated_state} ->
-        Logger.info("Received response from #{from}")
+        Logger.info("Received response from #{inspect(from)}")
         {:noreply, updated_state}
 
       _ ->
-        Logger.info("Received irrelevant response from #{from}")
+        Logger.info("Received irrelevant response from #{inspect(from)}")
         {:noreply, state}
     end
   end
