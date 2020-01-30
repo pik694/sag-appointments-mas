@@ -48,14 +48,14 @@ defmodule SagAppointments.Clinic do
 
   def handle_info(:clean_stale_queries, state) do
     past_threshold = Timex.shift(Timex.now(), milliseconds: -@wait_threshold)
-    Logger.info("Cleaning stale queries")
+    Logger.debug("Cleaning stale queries")
 
     {stale_queries, valid_queries} =
       Enum.split_with(state.queries, fn {_, %{query_time: query_time}} ->
         Timex.compare(query_time, past_threshold) < 1
       end)
 
-    Logger.info("Found #{length(stale_queries)} stale queries")
+    Logger.debug("Found #{length(stale_queries)} stale queries")
 
     Enum.each(stale_queries, &send_response(state, &1))
 
