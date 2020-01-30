@@ -8,7 +8,23 @@ defmodule SagAppointments.Router do
   defstruct query_id: 0, queries: %{}
 
   def start_link() do
-    GenServer.start_link(__MODULE__, nil)
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
+  end
+
+  def get_available_slots(opts) do
+    GenServer.call(__MODULE__, {:query_available, opts})
+  end
+
+  def get_visits_for_user(id) do
+    GenServer.call(__MODULE__, {:query_by_patient, id})
+  end
+
+  def delete_vist(visit_id) do
+    GenServer.call(__MODULE__, {:delete_appointment, visit_id})
+  end
+
+  def add_visit(patient_id, doctor_id, slot) do
+    GenServer.call(__MODULE__, {:add_appointment, doctor_id, patient_id, slot})
   end
 
   def init(nil) do
@@ -16,7 +32,7 @@ defmodule SagAppointments.Router do
     {:ok, %__MODULE__{}}
   end
 
-  def handle_call({from, request}, state) do
+  def handle_call(request, from, state) do
     if filter_request(state, request) do
       children = regions()
       {state_incremented, query_id} = get_unique_query_id(state)
@@ -28,32 +44,34 @@ defmodule SagAppointments.Router do
 
       {:noreply, updated_state}
     else
-      {id, pid} = from
-      GenServer.reply(pid, {:reply, id, self(), :irrelevant})
+      GenServer.reply(from, {:ok, :irrelevant})
       {:noreply, state}
     end
   end
 
   defp regions() do
     Supervisor.which_children(SagAppointments.Supervisor)
-    |> Enum.filter(fn {_, pid, _, _} -> is_pid(pid) end)
+    |> Enum.filter(fn {id, _, _, _} -> is_integer(id) end)
+    |> Enum.map(fn {_, pid, _, _} -> Supervisor.which_children(pid) end)
+    |> List.flatten()
+    |> Enum.filter(fn {id, pid, _, _} -> id == :region && is_pid(pid) end)
     |> Enum.map(&elem(&1, 1))
   end
 
   def handle_cast({:reply, query_id, from, response}, state) do
     case handle_response(state, query_id, from, response) do
       {:ok, updated_state, {to, response}} ->
-        Logger.info("Received response from #{from}")
-        Logger.info("Sending response to #{to}")
+        Logger.info("Received response from #{inspect(from)}")
+        Logger.info("Sending response to #{inspect(to)}")
         GenServer.reply(to, response)
         {:noreply, updated_state}
 
       {:ok, updated_state} ->
-        Logger.info("Received response from #{from}")
+        Logger.info("Received response from #{inspect(from)}")
         {:noreply, updated_state}
 
       _ ->
-        Logger.info("Received irrelevant response from #{from}")
+        Logger.info("Received irrelevant response from #{inspect(from)}")
         {:noreply, state}
     end
   end
@@ -118,7 +136,7 @@ defmodule SagAppointments.Router do
 
   defp should_response?(_, _), do: false
 
-  defp build_response(state, %{responses: responses, from: {query_id, from}}) do
+  defp build_response(state, %{responses: responses, from: from}) do
     filtered_responses =
       responses
       |> Enum.filter(fn
@@ -130,13 +148,13 @@ defmodule SagAppointments.Router do
         _ -> true
       end)
 
-    {from, {:reply, query_id, self(), do_build_response(filtered_responses, state)}}
+    {from, {:ok, do_build_response(filtered_responses, state)}}
   end
 
   defp do_build_response([], _), do: :irrelevant
 
-  defp do_build_response(responses, state) do
-    %{region: state.name, responses: responses}
+  defp do_build_response(responses, _) do
+    responses
   end
 
   defp build_query(query_id, children, from, request) do
@@ -152,7 +170,7 @@ defmodule SagAppointments.Router do
 
   defp exec({query_id, query}) do
     query.waiting_for_response
-    |> Enum.each(&GenServer.reply(&1, {{query_id, self()}, query.request}))
+    |> Enum.each(&GenServer.cast(&1, {{query_id, self()}, query.request}))
 
     {query_id, query}
   end

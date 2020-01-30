@@ -111,7 +111,7 @@ defmodule SagAppointments.Clinic do
   defp do_build_response(_, [], _), do: :irrelevant
 
   defp do_build_response(:add_appointment, [response], state) do
-    %{clinic_name: state.name, responses: [response]}
+    %{clinic: state.name, responses: [response]}
   end
 
   defp do_build_response(:query_by_patient, responses, state) do
@@ -127,7 +127,7 @@ defmodule SagAppointments.Clinic do
       end)
       |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
 
-    %{clinic_name: state.name, responses: response}
+    %{clinic: state.name, responses: response}
   end
 
   defp do_build_response(:query_available, responses, state) do
@@ -138,7 +138,7 @@ defmodule SagAppointments.Clinic do
       end)
       |> Enum.filter(fn %{slots: slots} -> not Enum.empty?(slots) end)
 
-    %{clinic_name: state.name, responses: response}
+    %{clinic: state.name, responses: response}
   end
 
   defp build_query(query_id, children, from, request) do

@@ -15,7 +15,7 @@ defmodule SagAppointments.ClinicTest do
 
   @tag fixtures: [:clinic, :relay]
   test "clinic can query its doctors for available slots", %{clinic: clinic, relay: relay} do
-    {:ok, %{clinic_name: "XYZ"}} =
+    {:ok, %{clinic: "XYZ"}} =
       Relay.send_message(relay, {:query_available, day: next_monday()}, clinic)
 
     assert Relay.send_message(
@@ -29,7 +29,7 @@ defmodule SagAppointments.ClinicTest do
   test "fetches empty when no slot found", %{clinic: clinic, relay: relay} do
     some_past_date = Timex.shift(Timex.today(), months: -1)
 
-    {:ok, %{clinic_name: "XYZ", responses: responses}} =
+    {:ok, %{clinic: "XYZ", responses: responses}} =
       Relay.send_message(
         relay,
         {:query_available, day: some_past_date},
@@ -48,7 +48,7 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", responses: [{:ok, appointemnt_id}]}} =
+    {:ok, %{clinic: "XYZ", responses: [{:ok, appointemnt_id}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},
@@ -67,14 +67,14 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", responses: [{:ok, _}]}} =
+    {:ok, %{clinic: "XYZ", responses: [{:ok, _}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", responses: [_]}} =
+    {:ok, %{clinic: "XYZ", responses: [_]}} =
       Relay.send_message(
         relay,
         {:query_by_patient, 0},
@@ -91,7 +91,7 @@ defmodule SagAppointments.ClinicTest do
         clinic
       )
 
-    {:ok, %{clinic_name: "XYZ", responses: [{:ok, appointemnt_id}]}} =
+    {:ok, %{clinic: "XYZ", responses: [{:ok, appointemnt_id}]}} =
       Relay.send_message(
         relay,
         {:add_appointment, response.doctor_id, 0, hd(response.slots)},
