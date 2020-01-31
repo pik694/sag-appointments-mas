@@ -77,4 +77,30 @@ W systemie zostały zdefiniowane reguły mówiące o zależnościach pomiędzy p
  - lekarz - grafik wizyt: są to byty zależne, awaria jednego powoduje wyłączenie drugiego agenta
 
 
-## Testowanie
+## U*ruchamianie
+
+Wymagane:
+- `elixir v1.9`
+
+Inicjalizacja projektu: `mix init`
+
+Uruchomienie: `iex -S mix run`
+
+Przykładowe komendy:
+
+
+```
+iex> tomorrow = Timex.shift(Timex.today, days: 1)
+
+iex> SagAppointments.get_available_slots(days: Timex.today)
+iex> SagAppointments.get_available_slots(from: Timex.today, until: tomorrow)
+
+iex> SagAppointments.get_available_slots(field: "Pediatra", days: Timex.today)
+iex> SagAppointments.get_available_slots(region: "Warszawa", field: "Pediatra", days: Timex.today)
+
+iex> SagAppointments.add_visit(0, 0, slot)
+
+iex> SagAppointments.get_visits_for_user(0)
+iex> SagAppointments.delete_visit(0)
+
+```
