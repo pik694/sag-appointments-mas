@@ -1,16 +1,16 @@
 # Wizyty lekarskie
 
-## Przegląd 
+## Przegląd
 System wieloagentowy realizujący rezerwacje wizyt lekarskich.
 
 ## Zakres projektu
 
-W ramach projektu semestralnego powstanie system wieloagentowy 
-obsługujący rezerwacje wizyt lekarskich. 
+W ramach projektu semestralnego został zrealizowany system wieloagentowy
+obsługujący rezerwacje wizyt lekarskich.
 
-System będzie oparty na sieciach kontraktowych:
+System jest oparty na sieciach kontraktowych:
 - manager przyjmuje zlecenie na omówienie wizyty z określonym specjalistą;
-- manager wysyła żądanie do kontraktorów, którzy przeglądają rejestry wizyt 
+- manager wysyła żądanie do kontraktorów, którzy przeglądają rejestry wizyt
 	i zwracają propozycję wizyty/informację o braku terminów;
 -  manager wybiera najlepszą ofertę (według kryteriów zadanych przez zleceniodawcę,
 	 np. w zależności od ceny/opinii lekarza, odległości) i wysyła żądanie umówienia wizyty;
@@ -19,7 +19,7 @@ System będzie oparty na sieciach kontraktowych:
 
 ### Akcje użytkownika
 
-W systemie użytkownik będzie mógł wykonać następujące akcje:
+W systemie użytkownik może wykonać następujące akcje:
 - zadać zapytanie odnośnie wizyty u specjalisty (możliwe filtrowanie po dacie, regionie, nazwisku lekarza);
 - zarezerwować wizytę spośród zwróconych w zapytaniu;
 - odwołać wizytę.
@@ -27,7 +27,7 @@ W systemie użytkownik będzie mógł wykonać następujące akcje:
 
 ## Technologie
 
-System zostanie napisany w języku Elixir i będzie uruchamiany na maszynie wirtualnej BEAM.
+System został zaimplementowany w języku Elixir (uruchamianie na maszynie wirtualnej BEAM).
 
 BEAM jest maszyną wirtualną zorientowaną na działanie równoległe i rozproszone.
 Rożne instancje maszyny wirtualnej potrafią się ze sobą komunikować i wykonywać funkcje zdalne
@@ -51,37 +51,56 @@ Nadzorcy są odpowiedzialni za wykrywanie anomalii w działaniu agentów oraz
 restartowanie ich wedle ustawionych polityk.
 
 
-## Architektura rozwiązania 
+## Architektura rozwiązania
 
-System będzie podzielony na kilka grup agentów, każda z nich będzie pełniła określone, odmienne zadania w systemie.
+System został zaimplementowany jako biblioteka działająca w systemie z następującym interfejsem:
+ - get_available_slots(opts \\ []) - pobiera wolne terminy wizyt u lekarzy, można filtrować po:
+   - region
+   - lekarz
+   - data
+ - get_visits_for_user(id) - pobiera wizyty dla użytkownika z podanym `id`
+ - delete_visit(visit_id) - usuwa/odwołuje wizytę z podanym `id`
+ - add_visit(user_id, doctor_id, slot) - tworzy wizytę użytkownika (`user_id`) u wybranego lekarza (`doctor_id`) w podanym slocie czasowym (`slot`)
 
-Celem zwiększenia ilości agentów każde zapytanie będzie reprezentowane w systemie przez osobnego agenta.
-Agent-zapytanie rozpropaguje zapytanie do wszystkich, znanych sobie, routerów.
-Stąd zapytanie zostanie przekierowane do routerów obsługującego specjalistów określonych
-w zapytaniu. Skąd zapytanie trafi do agentów reprezentujących lekarzy specjalistów. Ta warstwa agentów przetworzy
-zapytanie oraz odpowie bezpośrednio agentowi zadającemu zapytanie. 
+Powyższe zapytania trafiają do głównego routera aplikacji, który odpowiednio propaguje zapytania.
+System został podzielony na `regiony`, którymi nadzoruje `supervisor`. Regiony podzielone są na
+`kliniki`, kliniki składają się z `lekarzy` oraz ich `grafików wizyt`. Na każdym poziomie znajduje się supervisor który nadzoruje gałąź oraz lokalny router.
+
+W zależności od zapytania, trafia ono albo do konkretnego bytu, albo do wszytskich i reaguje tylko zainteresowany agent. W przypadku kiedy system czeka na odpowiedź od jednego lub wielu agentów zbyt długo, zwracane są dane, które udało się do tej pory zgromadzić.
+
+![](resources/sag.png)
+
+### Odporność na awarie
+W systemie zostały zdefiniowane reguły mówiące o zależnościach pomiędzy poszczególnymi typami agentów:
+ - region - kliniki: kliniki mogą działać w przypadku awarii regionu, w przypadku awarii kliniki nie będzie informacji z danej placówki
+ - klinika - lekarze: lekarze mogą działać w przypadku awarii kliniki, w przypadku awarii lekarza nie będzie informacji o danej jednostce
+ - lekarz - grafik wizyt: są to byty zależne, awaria jednego powoduje wyłączenie drugiego agenta
 
 
-## Testowanie
+## U*ruchamianie
 
-Testowanie systemu będzie się odbywało poprzez wstrzykiwanie agentów o określonych parametrach
-oraz obserwowanie zachowania systemu pod różnym obciążeniem.
-Agentów będziemy parametryzować w taki sposób, aby symulować wysokie obciążenie systemu oraz błędy oprogramowania.
- 
-Zamierzamy również wyłączać ręcznie pewne fragmenty systemu.
+Wymagane:
+- `elixir v1.9`
 
-Zastosujemy poniższe wskaźniki:
-- średni czas odpowiedzi;
-- wariancja czasu odpowiedzi;
-- minimalny czas odpowiedzi;
-- maksymalny czas odpowiedzi;
-- error rate.
+Inicjalizacja projektu: `mix init`
 
-### Testowi użytkowncy
+Uruchomienie: `iex -S mix run`
 
-Użytkownicy w SUT będą generowani programowo.
-Będą oni wysyłali zapytania do systemu zgodnie z rozkładem Gaussa.
-Rozkład naturalny będzie także cechował czasy reakcji użytkowników.
+Przykładowe komendy:
 
-Część użytkowników będzie złośliwa - próby rezerwacji nieistniejących slotów, nieistniejących lekarzy,
-odwoływanie nieistniejących wizyt, jak i wizyt już odbytych.
+
+```
+iex> tomorrow = Timex.shift(Timex.today, days: 1)
+
+iex> SagAppointments.get_available_slots(days: Timex.today)
+iex> SagAppointments.get_available_slots(from: Timex.today, until: tomorrow)
+
+iex> SagAppointments.get_available_slots(field: "Pediatra", days: Timex.today)
+iex> SagAppointments.get_available_slots(region: "Warszawa", field: "Pediatra", days: Timex.today)
+
+iex> SagAppointments.add_visit(0, 0, slot)
+
+iex> SagAppointments.get_visits_for_user(0)
+iex> SagAppointments.delete_visit(0)
+
+```
