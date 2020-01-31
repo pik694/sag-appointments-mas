@@ -68,6 +68,8 @@ System został podzielony na `regiony`, którymi nadzoruje `supervisor`. Regiony
 
 W zależności od zapytania, trafia ono albo do konkretnego bytu, albo do wszytskich i reaguje tylko zainteresowany agent. W przypadku kiedy system czeka na odpowiedź od jednego lub wielu agentów zbyt długo, zwracane są dane, które udało się do tej pory zgromadzić.
 
+![](resources/sag.png)
+
 ### Odporność na awarie
 W systemie zostały zdefiniowane reguły mówiące o zależnościach pomiędzy poszczególnymi typami agentów:
  - region - kliniki: kliniki mogą działać w przypadku awarii regionu, w przypadku awarii kliniki nie będzie informacji z danej placówki
