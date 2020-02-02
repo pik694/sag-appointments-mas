@@ -42,6 +42,10 @@ defmodule SagAppointments.Doctor do
   end
 
   def handle_cast({{query_id, from}, {:query_available, opts}}, state) do
+    if Enum.random(1..100) <= Application.fetch_env!(:sag_appointments, :doctor_crash_threshold) do
+      raise "randomly crashed"
+    end
+
     if compare_name_and_field(state, opts) do
       Logger.info("Listing available slots")
 
@@ -56,6 +60,10 @@ defmodule SagAppointments.Doctor do
   end
 
   def handle_cast({{query_id, from}, {:query_by_patient, patient_id}}, state) do
+    if Enum.random(1..100) <= Application.fetch_env!(:sag_appointments, :doctor_crash_threshold) do
+      raise "randomly crashed"
+    end
+
     Logger.info("Querying appointments of patient: #{patient_id}")
 
     {:ok, history} = Schedule.get_history(state.schedule)
@@ -76,6 +84,10 @@ defmodule SagAppointments.Doctor do
   end
 
   def handle_cast({{query_id, from}, {:add_appointment, doctor_id, patient_id, slot}}, state) do
+    if Enum.random(1..100) <= Application.fetch_env!(:sag_appointments, :doctor_crash_threshold) do
+      raise "randomly crashed"
+    end
+
     if doctor_id == state.id do
       Logger.info("Trying to add an appointment")
 
@@ -105,6 +117,10 @@ defmodule SagAppointments.Doctor do
   end
 
   def handle_cast({{_query_id, _from}, {:delete_appointment, appointment_id}}, state) do
+    if Enum.random(1..100) <= Application.fetch_env!(:sag_appointments, :doctor_crash_threshold) do
+      raise "randomly crashed"
+    end
+
     Logger.info("Deleting appointment #{appointment_id}")
     Schedule.delete_appointment(state.schedule, appointment_id)
     {:noreply, state}
