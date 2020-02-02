@@ -1,5 +1,4 @@
 defmodule SagAppointments.Performance.Scenarios.QueryAvailable do
-
   def init(opts) do
     index = Keyword.fetch!(opts, :index)
     runs = Keyword.fetch!(opts, :runs)
@@ -25,27 +24,29 @@ defmodule SagAppointments.Performance.Scenarios.QueryAvailable do
   end
 
   def run() do
-  
-    from  = Timex.shift(Timex.today, days: Enum.random(1..7))
+    from = Timex.shift(Timex.today(), days: Enum.random(1..7))
     until = Timex.shift(from, days: Enum.random(1..7))
     field = Enum.random(["Pediatra", "Laryngolog", "Okulista"])
     region = Enum.random([nil, "Warszawa", "Pruszków", "Grodzisk Mazowiecki", "Piaseczno"])
 
     opts = [from: from, until: until, field: field]
 
-    opts = case region do
-      nil -> opts
-      r -> [{:region, r} | opts]
-    end
-    start = :os.system_time(:millisecond) 
+    opts =
+      case region do
+        nil -> opts
+        r -> [{:region, r} | opts]
+      end
+
+    start = :os.system_time(:millisecond)
     result = SagAppointments.get_available_slots(opts)
     finish = :os.system_time(:millisecond)
-    
-    result = case result do
-      {:ok, _} ->  :ok
-      {:error, _} -> :error
-    end
 
-        {:ok, [%{method: :query, opts: Map.new(opts), start: start, end: finish, result: result}]}
+    result =
+      case result do
+        {:ok, _} -> :ok
+        {:error, _} -> :error
+      end
+
+    {:ok, [%{method: :query, opts: Map.new(opts), start: start, end: finish, result: result}]}
   end
 end

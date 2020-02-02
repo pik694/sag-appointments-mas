@@ -14,7 +14,7 @@ defmodule SagAppointments.Performance.RunnerManager do
       scenarios
       |> Enum.with_index()
       |> Enum.map(fn {{scenario, opts}, index} ->
-         IO.inspect("#{inspect(scenario)}, #{inspect(opts)}, #{index}")
+        IO.inspect("#{inspect(scenario)}, #{inspect(opts)}, #{index}")
         {:ok, pid} = GenServer.start_link(scenario, [{:index, index} | opts])
         {index, pid}
       end)
