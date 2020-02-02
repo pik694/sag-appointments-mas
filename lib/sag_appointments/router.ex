@@ -11,20 +11,36 @@ defmodule SagAppointments.Router do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def get_available_slots(opts) do
-    GenServer.call(__MODULE__, {:query_available, opts})
+  def get_available_slots(opts, all \\ false) do
+    if all do
+      GenServer.multi_call(__MODULE__, {:query_available, opts})
+    else
+      GenServer.call(__MODULE__, {:query_available, opts})
+    end
   end
 
-  def get_visits_for_user(id) do
-    GenServer.call(__MODULE__, {:query_by_patient, id})
+  def get_visits_for_user(id, all \\ false) do
+    if all do
+      GenServer.multi_call(__MODULE__, {:query_by_patient, id})
+    else
+      GenServer.call(__MODULE__, {:query_by_patient, id})
+    end
   end
 
-  def delete_vist(visit_id) do
-    GenServer.call(__MODULE__, {:delete_appointment, visit_id})
+  def delete_vist(visit_id, all \\ false) do
+    if all do
+      GenServer.call(__MODULE__, {:delete_appointment, visit_id})
+    else
+      GenServer.call(__MODULE__, {:delete_appointment, visit_id})
+    end
   end
 
-  def add_visit(patient_id, doctor_id, slot) do
-    GenServer.call(__MODULE__, {:add_appointment, doctor_id, patient_id, slot})
+  def add_visit(patient_id, doctor_id, slot, all \\ false) do
+    if all do
+      GenServer.call(__MODULE__, {:add_appointment, doctor_id, patient_id, slot})
+    else
+      GenServer.call(__MODULE__, {:add_appointment, doctor_id, patient_id, slot})
+    end
   end
 
   def init(nil) do
