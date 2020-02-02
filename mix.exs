@@ -23,6 +23,7 @@ defmodule SagAppointments.MixProject do
   defp deps do
     [
       {:timex, "~> 3.6"},
+      {:jason, "~> 1.1"},
       {:ex_unit_fixtures, "~> 0.3", only: [:test]}
     ]
   end
